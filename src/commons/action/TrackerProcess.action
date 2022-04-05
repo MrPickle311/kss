@@ -1,0 +1,21 @@
+#goal definition
+string   serial_port
+uint32   baud_rate
+float32  read_timeout
+---
+#result definition
+uint8 exit_code
+---
+#feedback
+string  tracker_mode
+float32 solar_panels_voltage
+float32 battery_voltage
+float32 charging_current
+float32 load_voltage
+float32 load_current
+uint16  charging_power
+uint16  load_power
+uint8   battery_temperature
+uint8   internal_temperature
+uint8   battery_level
+

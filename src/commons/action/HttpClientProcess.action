@@ -1,0 +1,10 @@
+#goal definition
+string host_address
+uint16 port
+uint8  station_id
+string images_directory
+---
+#result definition
+uint8 exit_code
+---
+#feedback

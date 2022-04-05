@@ -1,0 +1,11 @@
+#goal definition
+string host_address
+uint16 port
+uint8  server_address
+uint16 coils_offset
+---
+#result definition
+uint8 exit_code
+---
+#feedback
+bool is_plc_connected

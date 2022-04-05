@@ -1,0 +1,13 @@
+#goal definition
+uint8    bus_number
+uint8    device_address
+float32  feedback_interval
+---
+#result definition
+uint8 exit_code
+---
+#feedback
+# from 0 to 2pi
+# in radians
+float32 rotor_pos
+uint8   rotor_calibration_state

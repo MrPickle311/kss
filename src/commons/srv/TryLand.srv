@@ -1,0 +1,3 @@
+string mode
+---
+bool is_drone_landed

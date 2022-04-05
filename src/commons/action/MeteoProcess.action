@@ -1,0 +1,12 @@
+uint16 timeout
+---
+#result definition
+uint8 exit_code
+---
+#feedback
+float32 temperature
+float32 humidity
+float32 rain_mm
+int32   wind_speed
+int32   wind_gust
+int32   wind_direction

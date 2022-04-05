@@ -1,0 +1,8 @@
+#goal definition
+string host_address
+uint16 port
+---
+#result definition
+uint8 exit_code
+---
+#feedback

@@ -1,0 +1,16 @@
+coils starts from 8192
+coils count : 8
+ip: 192.168.0.3
+port: 4001 ?
+
+przykład działającego kodu
+```
+from pymodbus.client.sync import ModbusTcpClient
+
+dev = ModbusTcpClient(host='192.168.0.3',port=502)
+print('connection : ' ,dev.connect())
+
+resp = dev.write_coil(8196,True, unit=1)
+
+print(resp)
+```
