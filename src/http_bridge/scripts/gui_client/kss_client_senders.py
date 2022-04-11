@@ -1,6 +1,7 @@
 import datetime
 from http_io.simple_http_sender import SimpleHttpSender
-from data_models.kss_clients import ErrorMessage, StateMessage, DiagnosticsMessage
+from data_models.kss_clients import ErrorMessage, StateMessage, DiagnosticsMessage, PosistionMessage, DroneProps, \
+    KSSPropsModel
 
 
 class ErrorSender(SimpleHttpSender):
@@ -28,10 +29,23 @@ class StateSender(SimpleHttpSender):
 
 
 class DiagnosticsSender(SimpleHttpSender):
-    def __init__(self, host_address: str, port: int, station_id: int, module_id: str):
+    def __init__(self, host_address: str, port: int, station_id: int):
         SimpleHttpSender.__init__(self, host_address, port, station_id, 'telemetry', 'api')
-        self._module_id = module_id
 
-    def _create_message(self) -> DiagnosticsMessage:
-        msg = DiagnosticsMessage()
-        return msg
+    def _create_message(self, drone_longitude: float, drone_lattitude: float, drone_battery_voltage: float,
+                        drone_battery_temperature: float, station_accumulators_temperature: float,
+                        station_accumulators_level: float) -> DiagnosticsMessage:
+        return DiagnosticsMessage(
+            droneProps=DroneProps(
+                volt=drone_battery_voltage,
+                temp=drone_battery_temperature,
+                pos=PosistionMessage(
+                    lat=drone_lattitude,
+                    lng=drone_longitude
+                )
+            ),
+            KSSProps=KSSPropsModel(
+                temp=station_accumulators_temperature,
+                battery_level=station_accumulators_level
+            )
+        )

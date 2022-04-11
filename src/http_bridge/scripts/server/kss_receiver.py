@@ -15,7 +15,3 @@ class KSSServerAPI(ServerAPI):
         @self.route('/com/drone_state', methods=['POST'])
         def drone_state():
             return self._route_handler(request)
-
-        @self.route('/api/exposed_resources/<string:what>', methods=['GET'])
-        def resource_request(what: str):
-            return self._route_handler(request)

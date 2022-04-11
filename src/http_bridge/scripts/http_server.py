@@ -10,25 +10,12 @@ import rospy
 from typing import Dict, Optional, List, Callable
 from commons.msg import HttpServerProcessAction, HttpServerProcessGoal, HttpServerProcessResult, \
     HttpServerProcessFeedback
-from commons.msg import HttpServerSimpleEvent, MissionsUploadedEvent, HttpExposedResourcesContent, DroneEvent, \
+from commons.msg import HttpServerSimpleEvent, MissionsUploadedEvent, DroneEvent, \
     DroneState
 
 from exposed_resources.http_exposed_resources import ExposedResources
 
 from flask import Request, Response
-
-
-class ResourceGetters:
-    def __init__(self, kss_server_api: KSSServerAPI, exposed_resources: ExposedResources):
-        self._kss_server_api = kss_server_api
-        self._exposed_resources = exposed_resources
-
-        self._kss_server_api.add_api_path_handler('/api', '/exposed_resources/station_gps_pos',
-                                                  SimpleResourceGetter(self.get_station_gps_position))
-
-    def get_station_gps_position(self) -> Dict[str, float]:
-        return {'lat': self._exposed_resources.station_lattitude,
-                'lng': self._exposed_resources.station_longitude}
 
 
 class DroneEventProcessor(HttpEventProcessor):
@@ -70,7 +57,7 @@ class EventNotifiers:
 
     def _init_simple_event_notifiers(self):
         simple_events = ['start_drone', 'abort_drone', 'on_camera', 'off_camera', 'position_start', 'position_return',
-                         'open_roof', 'close_roof', 'land_drone_normally' , 'land_drone_emergency']
+                         'open_roof', 'close_roof', 'land_drone_normally', 'land_drone_emergency']
 
         for event in simple_events:
             self._kss_server_api.add_api_path_handler('/api', f'/gui_event/{event}', self._simple_event_processor)
@@ -87,12 +74,9 @@ class HttpServerModule(AbstractModule):
         self.add_signal_sender('/drone_event', DroneEvent)
         self.add_signal_sender('/drone_state', DroneState)
         self.add_signal_sender('/missions_uploaded_event', MissionsUploadedEvent)
-        self.add_signal_receiver('/exposed_resources', HttpExposedResourcesContent, self.receive_exposed_resources)
-        self._exposed_resources = ExposedResources(0.0, 0.0, 0.0, 0)
 
     def _init_http_server(self, host: str, port: int):
         self._kss_server = KSSServerAPI('web_server', port, host)
-        self._resource_getters = ResourceGetters(self._kss_server, self._exposed_resources)
         self._event_notifiers = EventNotifiers(self._kss_server, self.notify_simple_event,
                                                self.notify_drone_event,
                                                self.notify_about_new_missions,
@@ -132,10 +116,6 @@ class HttpServerModule(AbstractModule):
         state.voltage = voltage
         state.temperature = temperature
         self.send_signal(DroneState, state)
-
-    def receive_exposed_resources(self, incoming_resources: HttpExposedResourcesContent) -> None:
-        self._exposed_resources.station_longitude = incoming_resources.station_longitude
-        self._exposed_resources.station_lattitude = incoming_resources.station_lattitude
 
     def finish_module(self, exit_code: int) -> None:
         result = HttpServerProcessResult()

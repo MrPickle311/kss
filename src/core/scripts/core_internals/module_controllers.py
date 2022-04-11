@@ -25,7 +25,8 @@ from commons.srv import AutomationStates, SwitchModulePower
 from commons.srv import AutomationStatesRequest, SwitchModulePowerRequest
 
 from commons.srv import DroneSimpleTask, DroneSimpleTaskRequest, DroneSimpleTaskResponse, TryUploadMission, \
-    TryUploadMissionRequest, TryUploadMissionResponse, TryLand, TryLandRequest, TryLandResponse
+    TryUploadMissionRequest, TryUploadMissionResponse, TryLand, TryLandRequest, TryLandResponse, \
+    HttpExposedResourcesContent
 
 from pathlib import Path
 
@@ -254,11 +255,13 @@ class HttpServerController(AbstractModuleController):
 
 class HttpClientController(AbstractModuleController):
 
-    def __init__(self):
+    def __init__(self, station_collector: StationStateCollector):
         AbstractModuleController.__init__(self, 'http_client', HttpClientProcessAction)
+        self._station_collector = station_collector
         self.add_signal_sender('/send_station_state', StationState)
         self.add_signal_sender('/send_station_error', StationError)
         self.add_signal_sender('/send_images', SendImagesToServerEvent)
+        self.add_signal_sender('/exposed_resources', HttpExposedResourcesContent)
 
     def start_module(self):
         start_arguments = HttpClientProcessGoal()
@@ -291,6 +294,16 @@ class HttpClientController(AbstractModuleController):
         msg = SendImagesToServerEvent()
         msg.region_id = region_id
         self.send_signal(SendImagesToServerEvent, msg)
+
+    def send_exposed_resources(self):
+        msg = HttpExposedResourcesContent()
+        msg.drone_longitude = self._station_collector.drone_state.drone_longitude
+        msg.drone_lattitude = self._station_collector.drone_state.drone_lattitude
+        msg.drone_battery_voltage = self._station_collector.drone_state.drone_battery_voltage
+        msg.drone_battery_temperature = self._station_collector.drone_state.drone_battery_temperature
+        msg.station_accumulators_temperature = self._station_collector.mppt_state.station_battery_temperature
+        msg.station_accumulators_level = self._station_collector.mppt_state.battery_level
+        self.send_signal(HttpExposedResourcesContent, msg)
 
 
 class ComClientController(AbstractModuleController):
@@ -368,7 +381,7 @@ class StationModules:
         self.power_controller = PowerManagementModuleController(state_collector.power_management_state)
         self.meteo_controller = MeteoModuleController(state_collector.meteo_state)
         self.http_server_controller = HttpServerController(state_collector.drone_state)
-        self.http_client_controller = HttpClientController()
+        self.http_client_controller = HttpClientController(state_collector)
         self.com_client_controller = ComClientController()
         self.ftp_server_controller = FTPServerController()
 

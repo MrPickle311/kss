@@ -6,6 +6,7 @@ from core_internals.station_states import InitializationState, StartState, Drone
 from module_utils.signal_handlers import SigIntHandler
 from core_internals.flags_checker import FlagsChecker
 from core_internals.mission_storage import MissionStorage
+from multitimer import MultiTimer
 
 
 # TODO: add background processes class
@@ -13,6 +14,8 @@ from core_internals.mission_storage import MissionStorage
 
 
 class StateMachine:
+    RESOURCE_UPDATE_PERIOD = 1
+
     def __init__(self, station_modules: StationModules, station_state_collector: StationStateCollector,
                  station_event_flags: StationEventFlags, error_flags: ErrorFlags, mission_storage: MissionStorage):
         StationState.current_station_data = station_state_collector
@@ -29,11 +32,24 @@ class StateMachine:
         self._idle_state = IdleState()
         self._fire_protection_executor = FireProtectionState()
 
+        def update_resources():
+            station_modules.http_client_controller.send_exposed_resources()
+
+        self._resource_updater = MultiTimer(StateMachine.RESOURCE_UPDATE_PERIOD, update_resources)
+
+    def start_resource_update(self):
+        self._resource_updater.start()
+
+    def stop_resource_update(self):
+        self._resource_updater.stop()
+
     def run(self):
         StationState.init_station_states_scope()
         print('Initialized station scope')
         self._init_state.execute()
         print('Initialized module controllers')
+        self.start_resource_update()
+        print('Initialized exposed resources updater')
         while True:
             try:
                 self._idle_state.execute()
@@ -43,6 +59,7 @@ class StateMachine:
                 self._drone_after_landing_service_state.execute()
             except FireProtectionException:
                 self._fire_protection_executor.execute()
+                self.stop_resource_update()
                 break
 
 
@@ -63,13 +80,6 @@ class Core:
 
     def service_mppt_connection_state(self, state: int):
         print(state)
-
-    # TODO: the following feature works in background
-    # def update_exposed_resources(self):
-    #     resources = ExposedResources()
-    #     resources.station_lattitude = self._station_position.lattitude
-    #     resources.station_longitude = self._station_position.longitude
-    #     self._station_modules.http_server_controller.update_exposed_resources(resources)
 
     def start(self):
         self._flag_checker.start_checking()
