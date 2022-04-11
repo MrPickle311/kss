@@ -176,6 +176,12 @@ class PowerManagementModuleController(AbstractModuleController):
     def disable_mkt(self):
         self.switch_module_power(0, False)
 
+    def enable_camera(self):
+        self.switch_module_power(1, True)
+
+    def disable_camera(self):
+        self.switch_module_power(1, False)
+
 
 class MeteoModuleController(AbstractModuleController):
 

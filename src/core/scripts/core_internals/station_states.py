@@ -47,8 +47,8 @@ class StationState(ABC):
         'land_drone_normally': lambda: ...,
         'land_drone_emergency': lambda: ...,
         'abort_drone': lambda: StationState.station_modules.com_client_controller.abort_drone_mission(),
-        # 'on_camera': lambda: self.station_modules.power_controller.switch_module_power(0, True),
-        # 'off_camera': lambda: self.station_modules.power_controller.switch_module_power(0, False),
+        'on_camera': lambda: StationState.station_modules.power_controller.enable_camera(),
+        'off_camera': lambda: StationState.station_modules.power_controller.disable_camera(),
         'open_roof': lambda: StationState.try_open_roof(),
         'position_start': lambda: StationState.try_move_positioners_apart(),
         'position_return': lambda: StationState.try_slide_positioners_off(),
@@ -121,7 +121,6 @@ class StationState(ABC):
             StationState.wait_for_roof_open()
 
         return res
-
 
     @staticmethod
     @maybe_not_successful(StationErrors.CANNOT_MOVE_POSITIONERS_APART, StationStateIndicator.MOVED_POSITIONERS_APART)
@@ -291,6 +290,7 @@ class InitializationState(StationState):
     def execute(self):
         self.station_modules.init_modules()
         self.init_attached_peripherals()
+
         # tutaj już będę mieć od drona pozycje
         # self.update_station_position()
 
