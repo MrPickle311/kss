@@ -29,13 +29,9 @@ class StateSender(SimpleHttpSender):
 
 class DiagnosticsSender(SimpleHttpSender):
     def __init__(self, host_address: str, port: int, station_id: int, module_id: str):
-        SimpleHttpSender.__init__(self, host_address, port, station_id, 'diagnostics', 'api')
+        SimpleHttpSender.__init__(self, host_address, port, station_id, 'telemetry', 'api')
         self._module_id = module_id
 
     def _create_message(self) -> DiagnosticsMessage:
         msg = DiagnosticsMessage()
-        msg.station_id = self.station_id
-        msg.module_id = self._module_id
-        date = datetime.datetime.now()
-        msg.date = f'{date.year}-{date.month}-{date.day} {date.hour}:{date.minute}'
         return msg
