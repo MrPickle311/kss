@@ -59,7 +59,6 @@ class HttpClientModule(AbstractModule):
             incoming_resources.drone_lattitude,
             incoming_resources.drone_battery_voltage,
             incoming_resources.drone_battery_temperature,
-            incoming_resources.drone_battery_temperature,
             incoming_resources.station_accumulators_temperature,
             incoming_resources.station_accumulators_level
         )

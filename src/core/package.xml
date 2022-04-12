@@ -20,4 +20,5 @@
   <depend>actionlib</depend>
   <depend>rospy</depend>
   <depend>std_msgs</depend>
+  <test_depend>rosunit</test_depend>
 </package>

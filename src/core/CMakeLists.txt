@@ -195,9 +195,9 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-#        include
+        #        include
         ${catkin_INCLUDE_DIRS}
-#        ${CoreIncludeDirs}
+        #        ${CoreIncludeDirs}
 )
 
 
@@ -235,7 +235,7 @@ include_directories(
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 #add_dependencies(${PROJECT_NAME}_node
-        # ${${PROJECT_NAME}_EXPORTED_TARGETS}
+# ${${PROJECT_NAME}_EXPORTED_TARGETS}
 #        ${catkin_EXPORTED_TARGETS}
 #        )
 
@@ -245,7 +245,7 @@ include_directories(
 #        ${catkin_LIBRARIES}
 #        ${${Boost_LIBRARIES}}
 #        ${PROJECT_NAME}
-        # commonlib
+# commonlib
 #        )
 
 #############
@@ -301,4 +301,6 @@ catkin_install_python(PROGRAMS
 # endif()
 
 ## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
+catkin_add_nosetests(
+        scripts/tests.py
+)

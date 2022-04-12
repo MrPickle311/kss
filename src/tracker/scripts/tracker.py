@@ -162,7 +162,7 @@ class TrackerModule(AbstractModule):
         self._server.set_succeeded(result)
 
     def _notify_about_connection_state(self, connection: SerialState):
-        print(f'Connection state: {connection} type:  {type(connection)}')
+        print(f'Connection state: {connection}')
         sig = TrackerConnectionSignal()
         sig.signal_descriptor = connection
         self.send_signal(TrackerConnectionSignal, sig)

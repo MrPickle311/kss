@@ -11,7 +11,6 @@ from commons.msg import MissionsUploadedEvent, HttpServerSimpleEvent, ReceivedIm
 from .mission_storage import MissionStorage
 from data_models.kss_server import JsonMissionsMessage, JsonMissionPackage
 
-
 class FireProtectionException(Exception):
     pass
 
@@ -291,12 +290,10 @@ class InitializationState(StationState):
         self.station_modules.init_modules()
         self.init_attached_peripherals()
 
-        # tutaj już będę mieć od drona pozycje
-        # self.update_station_position()
-
         def predicate() -> bool:
             return StationState.station_event_flags.drone_state_presence == 'com_initialized'
 
+        print('Waiting for mkt')
         StationState.wait_for_predicate(predicate)
 
         self.update_station_state(StationStateIndicator.STATION_INITIALIZED)
@@ -387,7 +384,7 @@ class IdleState(StationState):
         return self.current_station_data.drone_state.drone_battery_voltage >= self.MAX_DRONE_BATTERY_VOLTAGE
 
     def is_good_battery_level(self) -> bool:
-        return self.MIN_DRONE_BATTERY_VOLTAGE <= self.current_station_data.drone_state.drone_battery_voltage < self.MAX_DRONE_BATTERY_VOLTAGE
+        return self.MIN_DRONE_BATTERY_VOLTAGE <= self.current_station_data.drone_state.drone_battery_voltage <= self.MAX_DRONE_BATTERY_VOLTAGE
 
     def is_battery_low_level(self) -> bool:
         return self.current_station_data.drone_state.drone_battery_voltage < self.MIN_DRONE_BATTERY_VOLTAGE
@@ -453,13 +450,13 @@ class DroneFlightState(StationState):
 
     def wait_for_landing_ready(self):
         # prawdziwe
-        # self.wait_for_com_event('drone_ready_to_land')
+        self.wait_for_com_event(['drone_is_ready_to_land'])
 
         # zaślepka
-        def predicate():
-            return True
+        # def predicate():
+        #     return True
 
-        self.wait_for_predicate(predicate)
+        # self.wait_for_predicate(predicate)
         self.update_station_state(StationStateIndicator.DRONE_READY_FOR_LANDING)
 
 

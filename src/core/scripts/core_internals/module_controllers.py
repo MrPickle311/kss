@@ -19,14 +19,13 @@ from commons.msg import MeteoProcessAction, MeteoProcessFeedback, MeteoProcessGo
 from commons.msg import PowerManagementProcessFeedback, PowerManagementProcessAction, PowerManagementProcessGoal, \
     PowerManagementProcessResult
 from commons.msg import TrackerConnectionSignal, HttpExposedResourcesContent, SendImagesToServerEvent, StationState, \
-    StationError, DroneState
+    StationError, DroneState, HttpExposedResourcesContent
 from commons.msg import TrackerProcessAction, TrackerProcessFeedback, TrackerProcessGoal, TrackerProcessResult
 from commons.srv import AutomationStates, SwitchModulePower
 from commons.srv import AutomationStatesRequest, SwitchModulePowerRequest
 
 from commons.srv import DroneSimpleTask, DroneSimpleTaskRequest, DroneSimpleTaskResponse, TryUploadMission, \
-    TryUploadMissionRequest, TryUploadMissionResponse, TryLand, TryLandRequest, TryLandResponse, \
-    HttpExposedResourcesContent
+    TryUploadMissionRequest, TryUploadMissionResponse, TryLand, TryLandRequest, TryLandResponse
 
 from pathlib import Path
 

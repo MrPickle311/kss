@@ -1,5 +1,5 @@
 #!/bin/bash
-source /home/oze/oze/3_kss/devel/setup.bash
+source ~/03_kss/devel/setup.bash
 
 gnome-terminal --window-with-profile=kss -e 'roscore'
 gnome-terminal --window-with-profile=kss -e 'rosrun http_bridge http_server.py'
