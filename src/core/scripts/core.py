@@ -58,8 +58,8 @@ class StateMachine:
                 self._drone_landing_service_state.execute()
                 self._drone_after_landing_service_state.execute()
             except FireProtectionException:
-                self._fire_protection_executor.execute()
                 self.stop_resource_update()
+                self._fire_protection_executor.execute()
                 break
 
 

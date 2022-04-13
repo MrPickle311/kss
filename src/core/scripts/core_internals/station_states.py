@@ -162,6 +162,7 @@ class StationState(ABC):
 
     @staticmethod
     def wait_for_roof_open():
+        @fire_protected(StationState.error_flags)
         def predicate() -> bool:
             return StationState.current_station_data.automation_state.current_state == 2  # TODO: make commons enums
 
@@ -169,6 +170,7 @@ class StationState(ABC):
 
     @staticmethod
     def wait_for_positioners_move_apart():
+        @fire_protected(StationState.error_flags)
         def predicate() -> bool:
             return StationState.current_station_data.automation_state.current_state == 4  # TODO: make commons enums
 
@@ -176,6 +178,7 @@ class StationState(ABC):
 
     @staticmethod
     def wait_for_positioners_slide_off():
+        @fire_protected(StationState.error_flags)
         def predicate() -> bool:
             return StationState.current_station_data.automation_state.current_state == 6  # TODO: make commons enums
 
@@ -183,6 +186,7 @@ class StationState(ABC):
 
     @staticmethod
     def wait_for_roof_close():
+        @fire_protected(StationState.error_flags)
         def predicate() -> bool:
             return StationState.current_station_data.automation_state.current_state == 8  # TODO: make commons enums
 
@@ -272,6 +276,7 @@ class FireProtectionState(StationState):
         self.station_modules.http_client_controller.send_error('fire')
 
     def cut_down_power(self):
+        print('Cutting down power')
         power_manager = self.station_modules.power_controller
         power_manager.disable_automation()
         power_manager.disable_drone_charging()
@@ -281,7 +286,7 @@ class FireProtectionState(StationState):
 
     @staticmethod
     def shutdown_system():
-        os.system("shutdown /s /t 0")
+        os.system("systemctl poweroff")
 
 
 class InitializationState(StationState):
@@ -511,6 +516,7 @@ class DroneAfterLandingServiceState(StationState):
         self.station_modules.http_client_controller.send_images(self.REGION_ID)
 
     def wait_for_receive_images_from_drone(self):
+        @fire_protected(StationState.error_flags)
         def predicate():
             return self.station_event_flags.are_images_received_event
 

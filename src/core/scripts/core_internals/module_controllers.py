@@ -82,6 +82,11 @@ class TrackerModuleController(AbstractModuleController):
         self._connection_state_notify_handler = connection_state_notify_handler
         self.add_signal_receiver('/tracker_connection_state', TrackerConnectionSignal,
                                  self.receive_tracker_connection_state)
+        self.add_signal_receiver('/is_simulated', Bool, self.switch_simulation)
+        self.IS_SIMULATED = False
+
+    def switch_simulation(self, msg: Bool):
+        self.IS_SIMULATED = msg.data
 
     def start_module(self):
         start_arguments = TrackerProcessGoal()
@@ -101,6 +106,11 @@ class TrackerModuleController(AbstractModuleController):
         self._mppt_state.station_battery_temperature = feedback.battery_temperature
         self._mppt_state.tracker_internal_temperature = feedback.internal_temperature
         self._mppt_state.battery_level = feedback.battery_level
+
+        if self.IS_SIMULATED:
+            self._mppt_state.station_battery_temperature = 90
+        else:
+            self._mppt_state.station_battery_temperature = feedback.battery_temperature
 
     def on_process_result_received(self, state: any, result: TrackerProcessResult) -> None:
         print(result.exit_code)
@@ -213,12 +223,6 @@ class HttpServerController(AbstractModuleController):
         self.add_signal_sender('/exposed_resources', HttpExposedResourcesContent)
         self._drone_state_collector = drone_collector
         self.add_signal_receiver('/drone_state', DroneState, self.update_drone_state)
-        self.add_signal_receiver('/is_simulated', Bool, self.switch_simulation)
-
-        self.IS_SIMULATED = False
-
-    def switch_simulation(self, msg: Bool):
-        self.IS_SIMULATED = msg.data
 
     def start_module(self):
         start_arguments = HttpServerProcessGoal()
@@ -245,11 +249,7 @@ class HttpServerController(AbstractModuleController):
         self._drone_state_collector.drone_longitude = drone_state.long
         self._drone_state_collector.drone_altitude = drone_state.alt
         self._drone_state_collector.drone_battery_voltage = drone_state.voltage
-
-        if self.IS_SIMULATED:
-            self._drone_state_collector.drone_battery_temperature = 90
-        else:
-            self._drone_state_collector.drone_battery_temperature = drone_state.temperature
+        self._drone_state_collector.drone_battery_temperature = drone_state.temperature
 
 
 class HttpClientController(AbstractModuleController):
