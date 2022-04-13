@@ -91,16 +91,16 @@ class TrackerModuleController(AbstractModuleController):
         AbstractModuleController.start_module(self, start_arguments)
 
     def process_feedback(self, feedback: TrackerProcessFeedback) -> None:
-        self._mppt_state._solar_panels_voltage = feedback.solar_panels_voltage
-        self._mppt_state._battery_voltage = feedback.battery_voltage
-        self._mppt_state._charging_current = feedback.charging_current
-        self._mppt_state._load_voltage = feedback.load_voltage
-        self._mppt_state._load_current = feedback.load_current
-        self._mppt_state._charging_power = feedback.charging_power
-        self._mppt_state._load_power = feedback.load_power
-        self._mppt_state._station_battery_temperature = feedback.battery_temperature
-        self._mppt_state._tracker_internal_temperature = feedback.internal_temperature
-        self._mppt_state._battery_level = feedback.battery_level
+        self._mppt_state.solar_panels_voltage = feedback.solar_panels_voltage
+        self._mppt_state.battery_voltage = feedback.battery_voltage
+        self._mppt_state.charging_current = feedback.charging_current
+        self._mppt_state.load_voltage = feedback.load_voltage
+        self._mppt_state.load_current = feedback.load_current
+        self._mppt_state.charging_power = feedback.charging_power
+        self._mppt_state.load_power = feedback.load_power
+        self._mppt_state.station_battery_temperature = feedback.battery_temperature
+        self._mppt_state.tracker_internal_temperature = feedback.internal_temperature
+        self._mppt_state.battery_level = feedback.battery_level
 
     def on_process_result_received(self, state: any, result: TrackerProcessResult) -> None:
         print(result.exit_code)

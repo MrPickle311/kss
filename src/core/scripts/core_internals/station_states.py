@@ -54,7 +54,7 @@ class StationState(ABC):
         'close_roof': lambda: StationState.try_close_roof()}
 
     drone_events = {
-        'drone_ready_to_land': lambda: ...,
+        'drone_is_ready_to_land': lambda: ...,
         'drone_landed': lambda: ...,
         'com_initialized': lambda: ...
     }
@@ -449,14 +449,8 @@ class DroneFlightState(StationState):
         print('Drone flight state is finished')
 
     def wait_for_landing_ready(self):
-        # prawdziwe
         self.wait_for_com_event(['drone_is_ready_to_land'])
-
-        # zaślepka
-        # def predicate():
-        #     return True
-
-        # self.wait_for_predicate(predicate)
+        print('Drone is ready to land')
         self.update_station_state(StationStateIndicator.DRONE_READY_FOR_LANDING)
 
 
