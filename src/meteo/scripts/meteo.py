@@ -4,9 +4,7 @@ from multitimer import MultiTimer
 from module_io.module_interface import AbstractModule
 from module_utils.signal_handlers import SigIntHandler
 import rospy
-from threading import Lock, Condition
 
-import commons.msg
 from commons.msg import MeteoProcessGoal, MeteoProcessFeedback, MeteoProcessResult, MeteoProcessAction
 from enums.meteo import DevicesStringDescriptors, DevicesIntDescriptors
 from data_models.meteo import TemperatureAndHumiditySensorData, RainSensorData, WindSensorData, DeviceInfo, \

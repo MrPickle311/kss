@@ -51,6 +51,7 @@ class AutomationModuleController(AbstractModuleController):
 
     def process_feedback(self, feedback: AutomationProcessFeedback) -> None:
         self._automation_state.is_plc_connected = feedback.is_plc_connected
+        print(f'PLC: {feedback.is_plc_connected}')
         self._automation_state.current_state = feedback.current_state
 
     def on_process_result_received(self, state: any, result: AutomationProcessResult) -> None:
@@ -116,6 +117,7 @@ class TrackerModuleController(AbstractModuleController):
         print(result.exit_code)
 
     def receive_tracker_connection_state(self, state: TrackerConnectionSignal) -> None:
+        print(f'Tracker: {state.signal_descriptor}')
         ...
         # self._connection_state_notify_handler(state.signal_descriptor)
 
@@ -139,6 +141,7 @@ class PowerManagementModuleController(AbstractModuleController):
         AbstractModuleController.start_module(self, start_arguments)
 
     def process_feedback(self, feedback: PowerManagementProcessFeedback) -> None:
+        print(f'Logo: {feedback.is_plc_connected}')
         self._power_management_state = feedback.is_plc_connected
 
     def on_process_result_received(self, state: any, result: PowerManagementProcessResult) -> None:
@@ -223,6 +226,8 @@ class MeteoModuleController(AbstractModuleController):
 class HttpServerController(AbstractModuleController):
 
     def __init__(self, drone_collector: DroneStateCollector):
+
+    def process_feedback(self, feedback: HttpServerProcessFeedback) -> None:
         AbstractModuleController.__init__(self, 'http_server', HttpServerProcessAction)
         self.add_signal_sender('/exposed_resources', HttpExposedResourcesContent)
         self._drone_state_collector = drone_collector
@@ -234,8 +239,6 @@ class HttpServerController(AbstractModuleController):
         # start_arguments.host_address = '192.168.8.199'
         start_arguments.port = 8080
         AbstractModuleController.start_module(self, start_arguments)
-
-    def process_feedback(self, feedback: HttpServerProcessFeedback) -> None:
         print('Feedback received')
         pass
 
@@ -299,6 +302,7 @@ class HttpClientController(AbstractModuleController):
         self.send_signal(SendImagesToServerEvent, msg)
 
     def send_exposed_resources(self):
+        print('SENDING!!!!')
         msg = HttpExposedResourcesContent()
         msg.drone_longitude = self._station_collector.drone_state.drone_longitude
         msg.drone_lattitude = self._station_collector.drone_state.drone_lattitude
