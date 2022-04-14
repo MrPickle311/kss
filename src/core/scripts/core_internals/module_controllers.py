@@ -187,10 +187,14 @@ class PowerManagementModuleController(AbstractModuleController):
         self.switch_module_power(0, False)
 
     def enable_camera(self):
-        self.switch_module_power(1, True)
+        self.switch_module_power(6, True)
+        time.sleep(1)
+        self.switch_module_power(7, True)
 
     def disable_camera(self):
-        self.switch_module_power(1, False)
+        self.switch_module_power(6, False)
+        time.sleep(1)
+        self.switch_module_power(7, False)
 
 
 class MeteoModuleController(AbstractModuleController):

@@ -2,10 +2,11 @@
 
 from http_io.http_sender import HttpSender
 import base64
-import os, glob
+import os
 
 from data_models.kss_clients import JsonImageFormat, JsonImagesMessageFormat
 from typing import List
+from flask import Response
 
 
 class ImageSender(HttpSender):
@@ -66,13 +67,20 @@ class ImageSender(HttpSender):
         for file in os.scandir(self._images_directory):
             os.remove(file.path)
 
+    @staticmethod
+    def remove_files(files: List[str]) -> None:
+        map(os.remove, files)
+
     def send_images(self, region_id: int) -> None:
         directory = os.fsencode(self._images_directory)
         images_paths = self.grab_all_images_names(directory)
         images_paths_sublists = self.get_splitted_images_path_lists(images_paths)
 
         for images_sublist in images_paths_sublists:
-            data = self._create_msg(images_sublist , region_id)
-            self.send_message(data)
+            data = self._create_msg(images_sublist, region_id)
+            resp: Response = self.send_message(data)
+            if resp.status_code != 200:
+                break
+            self.remove_files(images_sublist)
 
-        self.clear_directory()
+        # self.clear_directory()
