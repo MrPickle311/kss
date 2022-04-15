@@ -1,4 +1,4 @@
-from server.upload_mission_event import MissionReceiver
+from server.upload_mission_event import JsonReceiver
 from server.kss_receiver import KSSServerAPI
 from http_io.simple_server_entities import SimpleResourceGetter, SimpleHttpEventProcessor, HttpEventProcessor
 
@@ -11,7 +11,7 @@ from typing import Dict, Optional, List, Callable
 from commons.msg import HttpServerProcessAction, HttpServerProcessGoal, HttpServerProcessResult, \
     HttpServerProcessFeedback
 from commons.msg import HttpServerSimpleEvent, MissionsUploadedEvent, DroneEvent, \
-    DroneState
+    DroneState, ParamsUploadedEvent
 
 from exposed_resources.http_exposed_resources import ExposedResources
 
@@ -40,30 +40,43 @@ class EventNotifiers:
     def __init__(self, kss_server_api: KSSServerAPI,
                  simple_event_notify_handler: Callable[[str], None],
                  drone_event_notify_handler: Callable[[str], None],
-                 storage_insertion_handler: Callable[[str], None],
+                 mission_insertion_handler: Callable[[str], None],
+                 parameters_insertion_handler: Callable[[str], None],
                  drone_state_update_handler: Callable[[float, float, float, float, float], None]):
         self._kss_server_api = kss_server_api
 
-        self._simple_event_processor = SimpleHttpEventProcessor(simple_event_notify_handler)
-        self._drone_event_processor = DroneEventProcessor(drone_event_notify_handler)
-        self._drone_state_processor = DroneStateProcessor(drone_state_update_handler)
+        self._simple_event_processor = SimpleHttpEventProcessor(
+            simple_event_notify_handler)
+        self._drone_event_processor = DroneEventProcessor(
+            drone_event_notify_handler)
+        self._drone_state_processor = DroneStateProcessor(
+            drone_state_update_handler)
 
         self._init_simple_event_notifiers()
-        self._init_advanced_event_notifiers(storage_insertion_handler)
+        self._init_advanced_event_notifiers(
+            mission_insertion_handler, parameters_insertion_handler)
 
-    def _init_advanced_event_notifiers(self, storage_insertion_handler: Callable[[str], None]):
-        self._mission_receiver = MissionReceiver(storage_insertion_handler)
-        self._kss_server_api.add_api_path_handler('/api', '/gui_event/upload_mission', self._mission_receiver)
+    def _init_advanced_event_notifiers(self, mission_insertion_handler: Callable[[str], None],
+                                       parameters_insertion_handler: Callable[[str], None]):
+        self._mission_receiver = JsonReceiver(mission_insertion_handler)
+        self._parameters_receiver = JsonReceiver(parameters_insertion_handler)
+        self._kss_server_api.add_api_path_handler(
+            '/api', '/gui_event/upload_mission', self._mission_receiver)
+        self._kss_server_api.add_api_path_handler(
+            '/api', '/parameters', self._parameters_receiver)
 
     def _init_simple_event_notifiers(self):
         simple_events = ['start_drone', 'abort_drone', 'on_camera', 'off_camera', 'position_start', 'position_return',
                          'open_roof', 'close_roof', 'land_drone_normally', 'land_drone_emergency']
 
         for event in simple_events:
-            self._kss_server_api.add_api_path_handler('/api', f'/gui_event/{event}', self._simple_event_processor)
+            self._kss_server_api.add_api_path_handler(
+                '/api', f'/gui_event/{event}', self._simple_event_processor)
 
-        self._kss_server_api.add_api_path_handler('/com', '/drone_event', self._drone_event_processor)
-        self._kss_server_api.add_api_path_handler('/com', '/drone_state', self._drone_state_processor)
+        self._kss_server_api.add_api_path_handler(
+            '/com', '/drone_event', self._drone_event_processor)
+        self._kss_server_api.add_api_path_handler(
+            '/com', '/drone_state', self._drone_state_processor)
 
 
 class HttpServerModule(AbstractModule):
@@ -73,13 +86,16 @@ class HttpServerModule(AbstractModule):
         self.add_signal_sender('/simple_http_event', HttpServerSimpleEvent)
         self.add_signal_sender('/drone_event', DroneEvent)
         self.add_signal_sender('/drone_state', DroneState)
-        self.add_signal_sender('/missions_uploaded_event', MissionsUploadedEvent)
+        self.add_signal_sender(
+            '/missions_uploaded_event', MissionsUploadedEvent)
+        self.add_signal_sender('/params_update', ParamsUploadedEvent)
 
     def _init_http_server(self, host: str, port: int):
         self._kss_server = KSSServerAPI('web_server', port, host)
         self._event_notifiers = EventNotifiers(self._kss_server, self.notify_simple_event,
                                                self.notify_drone_event,
                                                self.notify_about_new_missions,
+                                               self.notify_about_parameters_update,
                                                self.notify_drone_state)
 
     def start_module(self, start_args: HttpServerProcessGoal) -> None:
@@ -96,6 +112,11 @@ class HttpServerModule(AbstractModule):
         event = MissionsUploadedEvent()
         event.missions_body = mission_json_body
         self.send_signal(MissionsUploadedEvent, event)
+
+    def notify_about_parameters_update(self, params_json_body: str) -> None:
+        event = ParamsUploadedEvent()
+        event.params_body = params_json_body
+        self.send_signal(ParamsUploadedEvent, event)
 
     def notify_simple_event(self, event_name: str) -> None:
         event = HttpServerSimpleEvent()
@@ -124,7 +145,8 @@ class HttpServerModule(AbstractModule):
 
 
 if __name__ == "__main__":
-    th = Thread(target=lambda: rospy.init_node('http_server', anonymous=True, disable_signals=True))
+    th = Thread(target=lambda: rospy.init_node(
+        'http_server', anonymous=True, disable_signals=True))
     th.run()
     http_server = HttpServerModule('http_server')
     sigint_handler = SigIntHandler()

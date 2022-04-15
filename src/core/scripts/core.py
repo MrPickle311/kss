@@ -8,7 +8,8 @@ from core_internals.flags_checker import FlagsChecker
 from core_internals.mission_storage import MissionStorage
 from multitimer import MultiTimer
 
-
+import core_internals.module_controllers
+from core_internals.containers import GlobalContainer
 # TODO: add background processes class
 # TODO: add class for signal bindings
 
@@ -35,7 +36,8 @@ class StateMachine:
         def update_resources():
             station_modules.http_client_controller.send_exposed_resources()
 
-        self._resource_updater = MultiTimer(StateMachine.RESOURCE_UPDATE_PERIOD, update_resources)
+        self._resource_updater = MultiTimer(
+            StateMachine.RESOURCE_UPDATE_PERIOD, update_resources)
 
     def start_resource_update(self):
         self._resource_updater.start()
@@ -66,10 +68,14 @@ class StateMachine:
 class Core:
     def __init__(self):
         self._station_state_collector = StationStateCollector()
-        self._station_modules = StationModules(self._station_state_collector, self.service_mppt_connection_state)
-        self._station_event_flags = StationEventFlags('none', 'none', False, '', False)
-        self._error_flags = ErrorFlags(True, True, True, True, True, True, True, True, True, True, True)
-        self._flag_checker = FlagsChecker(self._station_state_collector, self._error_flags, 0.4)
+        self._station_modules = StationModules(
+            self._station_state_collector, self.service_mppt_connection_state)
+        self._station_event_flags = StationEventFlags(
+            'none', 'none', False, '', False)
+        self._error_flags = ErrorFlags(
+            True, True, True, True, True, True, True, True, True, True, True)
+        self._flag_checker = FlagsChecker(
+            self._station_state_collector, self._error_flags, 0.4)
         self._mission_storage = MissionStorage()
 
         # TODO: imrpve the following line with real
@@ -88,6 +94,10 @@ class Core:
 
 if __name__ == '__main__':
     rospy.init_node('core')
+    container = GlobalContainer()
+    container.wire(
+        modules=[__name__, core_internals.module_controllers.__name__])
+
     sigint_handler = SigIntHandler()
     core = Core()
     core.start()

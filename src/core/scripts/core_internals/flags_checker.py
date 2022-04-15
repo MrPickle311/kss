@@ -42,8 +42,6 @@ class FlagsChecker:
 
         # self.check_solar_panels_voltage()
 
-        # self.check_charging_current()
-
     def check_drone_battery_temperature(self):
         if self._station_state_collector.drone_state.drone_battery_temperature > self.DRONE_BATTERY_MAX_TEMP:
             self._error_flags.is_drone_battery_temperature_good = False
@@ -97,9 +95,3 @@ class FlagsChecker:
             self._error_flags.is_solar_panels_voltage_good = False
         else:
             self._error_flags.is_solar_panels_voltage_good = True
-
-    def check_charging_current(self):
-        if self._station_state_collector.mppt_state.charging_current < self.MAX_CHARGING_CURRENT:
-            self._error_flags.is_charging_current_good = True
-        else:
-            self._error_flags.is_charging_current_good = False

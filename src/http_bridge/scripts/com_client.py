@@ -6,12 +6,15 @@ from commons.msg import HttpClientProcessAction, HttpClientProcessGoal, HttpClie
     HttpClientProcessFeedback
 from commons.srv import DroneSimpleTask, DroneSimpleTaskRequest, DroneSimpleTaskResponse, TryUploadMission, \
     TryUploadMissionRequest, TryUploadMissionResponse
+from commons.msg import ParamsUploadedEvent
+
 from requests import Response
 
-from com_client_internal.com_client_senders import ComEventSender, StartMissionSender
+from com_client_internal.com_client_senders import ComEventSender, StartMissionSender, ParametersSender
 from module_io.module_interface import AbstractModule
 from module_utils.signal_handlers import SigIntHandler
 from data_models.kss_server import JsonMissionsMessage
+from data_models.params import DynamicParams
 
 
 class HttpClientModule(AbstractModule):
@@ -19,8 +22,13 @@ class HttpClientModule(AbstractModule):
         AbstractModule.__init__(self, module_name, HttpClientProcessAction)
         self._start_mission_sender: Optional[StartMissionSender] = None
         self._drone_landing_sender: Optional[ComEventSender] = None
-        self.add_task_processor('/drone_task', DroneSimpleTask, self.service_drone_task)
-        self.add_task_processor('/start_mission', TryUploadMission, self.service_start_mission)
+        self._parameters_sender: Optional[ParametersSender] = None
+        self.add_task_processor(
+            '/drone_task', DroneSimpleTask, self.service_drone_task)
+        self.add_task_processor(
+            '/start_mission', TryUploadMission, self.service_start_mission)
+        self.add_signal_receiver(
+            '/params_update', ParamsUploadedEvent, self.update_com_parameters)
 
         self._drone_events = {
             'land_drone_normally': lambda: self._drone_normally_landing_sender.send_empty_message(),
@@ -28,12 +36,18 @@ class HttpClientModule(AbstractModule):
         }
 
     def _init_senders(self, ip_address: str, port: int, station_id: int, images_directory: str):
-        self._start_mission_sender = StartMissionSender(ip_address, port, station_id)
-        self._drone_normally_landing_sender = ComEventSender(ip_address, port, station_id, 'land_drone_normally')
-        self._drone_emergency_landing_sender = ComEventSender(ip_address, port, station_id, 'land_drone_emergency')
+        self._start_mission_sender = StartMissionSender(
+            ip_address, port, station_id)
+        self._parameters_sender = ParametersSender(
+            ip_address, port, station_id)
+        self._drone_normally_landing_sender = ComEventSender(
+            ip_address, port, station_id, 'land_drone_normally')
+        self._drone_emergency_landing_sender = ComEventSender(
+            ip_address, port, station_id, 'land_drone_emergency')
 
     def start_module(self, start_args: HttpClientProcessGoal) -> None:
-        self._init_senders(start_args.host_address, start_args.port, start_args.station_id, start_args.images_directory)
+        self._init_senders(start_args.host_address, start_args.port,
+                           start_args.station_id, start_args.images_directory)
 
         self.wait_for_module_finish()
 
@@ -58,6 +72,10 @@ class HttpClientModule(AbstractModule):
         msg = JsonMissionsMessage.parse_raw(body.waypoints_path)
         resp = self._start_mission_sender.send_simple_message(msg)
         return TryUploadMissionResponse(self.return_response(resp))
+
+    def update_com_parameters(self, body: ParamsUploadedEvent) -> None:
+        self._parameters_sender.send_simple_message(
+            DynamicParams.parse_raw(body.params_body))
 
 
 def main():

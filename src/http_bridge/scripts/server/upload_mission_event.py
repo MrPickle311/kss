@@ -5,7 +5,7 @@ from flask import jsonify
 from http_io.simple_server_entities import HttpPathHandler
 
 
-class MissionReceiver(HttpPathHandler):
+class JsonReceiver(HttpPathHandler):
 
     def __init__(self, storage_insertion_handler: Callable[[str], None]):
         HttpPathHandler.__init__(self)

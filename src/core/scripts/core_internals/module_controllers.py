@@ -18,8 +18,10 @@ from commons.msg import HttpServerProcessAction, HttpServerProcessGoal, HttpServ
 from commons.msg import MeteoProcessAction, MeteoProcessFeedback, MeteoProcessGoal, MeteoProcessResult
 from commons.msg import PowerManagementProcessFeedback, PowerManagementProcessAction, PowerManagementProcessGoal, \
     PowerManagementProcessResult
+
 from commons.msg import TrackerConnectionSignal, HttpExposedResourcesContent, SendImagesToServerEvent, StationState, \
-    StationError, DroneState, HttpExposedResourcesContent
+    StationError, DroneState, HttpExposedResourcesContent, ParamsUploadedEvent
+
 from commons.msg import TrackerProcessAction, TrackerProcessFeedback, TrackerProcessGoal, TrackerProcessResult
 from commons.srv import AutomationStates, SwitchModulePower
 from commons.srv import AutomationStatesRequest, SwitchModulePowerRequest
@@ -28,15 +30,22 @@ from commons.srv import DroneSimpleTask, DroneSimpleTaskRequest, DroneSimpleTask
     TryUploadMissionRequest, TryUploadMissionResponse, TryLand, TryLandRequest, TryLandResponse
 
 from pathlib import Path
+from .containers import GlobalContainer
 
 from data_models.kss_server import JsonMissionPackage, JsonMissionsMessage
 from std_msgs.msg import Bool
+
+from dependency_injector.wiring import Provide, inject
+from .parameters import ParametersConfigurator
+
+from data_models.params import DynamicParams
 
 
 class AutomationModuleController(AbstractModuleController):
 
     def __init__(self, automation_state: AutomationStateCollector):
-        AbstractModuleController.__init__(self, 'automation_interface', AutomationProcessAction)
+        AbstractModuleController.__init__(
+            self, 'automation_interface', AutomationProcessAction)
         self._automation_state = automation_state
         self.add_task_publisher('/state_apply', AutomationStates)
 
@@ -78,7 +87,8 @@ class AutomationModuleController(AbstractModuleController):
 class TrackerModuleController(AbstractModuleController):
 
     def __init__(self, mppt_state: MPPTStateCollector, connection_state_notify_handler: Callable[[int], None]):
-        AbstractModuleController.__init__(self, 'tracker_interface', TrackerProcessAction)
+        AbstractModuleController.__init__(
+            self, 'tracker_interface', TrackerProcessAction)
         self._mppt_state = mppt_state
         self._connection_state_notify_handler = connection_state_notify_handler
         self.add_signal_receiver('/tracker_connection_state', TrackerConnectionSignal,
@@ -125,7 +135,8 @@ class TrackerModuleController(AbstractModuleController):
 class PowerManagementModuleController(AbstractModuleController):
 
     def __init__(self, power_management_state: PowerManagementStateCollector):
-        AbstractModuleController.__init__(self, 'power_manager_interface', PowerManagementProcessAction)
+        AbstractModuleController.__init__(
+            self, 'power_manager_interface', PowerManagementProcessAction)
         self._power_management_state = power_management_state
         self.add_task_publisher('/power_switching', SwitchModulePower)
 
@@ -148,7 +159,8 @@ class PowerManagementModuleController(AbstractModuleController):
         print(result.exit_code)
 
     def switch_module_power(self, module_id: int, is_turn_on: bool) -> None:
-        task = SwitchModulePowerRequest(module_id=module_id, turn_on=is_turn_on)
+        task = SwitchModulePowerRequest(
+            module_id=module_id, turn_on=is_turn_on)
         self.send_task(SwitchModulePower, task)
 
     def enable_edit_mode(self):
@@ -203,7 +215,8 @@ class PowerManagementModuleController(AbstractModuleController):
 class MeteoModuleController(AbstractModuleController):
 
     def __init__(self, meteo_state: MeteoStateCollector):
-        AbstractModuleController.__init__(self, 'meteo_interface', MeteoProcessAction)
+        AbstractModuleController.__init__(
+            self, 'meteo_interface', MeteoProcessAction)
         self._meteo_state = meteo_state
 
     def start_module(self):
@@ -223,51 +236,17 @@ class MeteoModuleController(AbstractModuleController):
         print(result.exit_code)
 
 
-class HttpServerController(AbstractModuleController):
-
-    def __init__(self, drone_collector: DroneStateCollector):
-
-    def process_feedback(self, feedback: HttpServerProcessFeedback) -> None:
-        AbstractModuleController.__init__(self, 'http_server', HttpServerProcessAction)
-        self.add_signal_sender('/exposed_resources', HttpExposedResourcesContent)
-        self._drone_state_collector = drone_collector
-        self.add_signal_receiver('/drone_state', DroneState, self.update_drone_state)
-
-    def start_module(self):
-        start_arguments = HttpServerProcessGoal()
-        start_arguments.host_address = '192.168.1.10'
-        # start_arguments.host_address = '192.168.8.199'
-        start_arguments.port = 8080
-        AbstractModuleController.start_module(self, start_arguments)
-        print('Feedback received')
-        pass
-
-    def on_process_result_received(self, state: any, result: HttpServerProcessResult) -> None:
-        print(result.exit_code)
-
-    def update_exposed_resources(self, exposed_resources: ExposedResources) -> None:
-        content = HttpExposedResourcesContent()
-        content.station_longitude = exposed_resources._station_longitude
-        content.station_lattitude = exposed_resources._station_lattitude
-        self.send_signal(HttpExposedResourcesContent, content)
-
-    def update_drone_state(self, drone_state: DroneState):
-        self._drone_state_collector.drone_lattitude = drone_state.latt
-        self._drone_state_collector.drone_longitude = drone_state.long
-        self._drone_state_collector.drone_altitude = drone_state.alt
-        self._drone_state_collector.drone_battery_voltage = drone_state.voltage
-        self._drone_state_collector.drone_battery_temperature = drone_state.temperature
-
-
 class HttpClientController(AbstractModuleController):
 
     def __init__(self, station_collector: StationStateCollector):
-        AbstractModuleController.__init__(self, 'http_client', HttpClientProcessAction)
+        AbstractModuleController.__init__(
+            self, 'http_client', HttpClientProcessAction)
         self._station_collector = station_collector
         self.add_signal_sender('/send_station_state', StationState)
         self.add_signal_sender('/send_station_error', StationError)
         self.add_signal_sender('/send_images', SendImagesToServerEvent)
-        self.add_signal_sender('/exposed_resources', HttpExposedResourcesContent)
+        self.add_signal_sender('/exposed_resources',
+                               HttpExposedResourcesContent)
 
     def start_module(self):
         start_arguments = HttpClientProcessGoal()
@@ -302,7 +281,6 @@ class HttpClientController(AbstractModuleController):
         self.send_signal(SendImagesToServerEvent, msg)
 
     def send_exposed_resources(self):
-        print('SENDING!!!!')
         msg = HttpExposedResourcesContent()
         msg.drone_longitude = self._station_collector.drone_state.drone_longitude
         msg.drone_lattitude = self._station_collector.drone_state.drone_lattitude
@@ -316,9 +294,11 @@ class HttpClientController(AbstractModuleController):
 class ComClientController(AbstractModuleController):
 
     def __init__(self):
-        AbstractModuleController.__init__(self, 'com_client', HttpClientProcessAction)
+        AbstractModuleController.__init__(
+            self, 'com_client', HttpClientProcessAction)
         self.add_task_publisher('/drone_task', DroneSimpleTask)
         self.add_task_publisher('/start_mission', TryUploadMission)
+        self.add_signal_sender('/com/parameters', ParamsUploadedEvent)
 
     def start_module(self):
         start_arguments = HttpClientProcessGoal()
@@ -355,20 +335,63 @@ class ComClientController(AbstractModuleController):
     def try_emergency_land_drone(self) -> bool:
         return self.do_simple_task('land_drone_emergency')
 
+    def update_parameters(self, new_parameters: DynamicParams) -> None:
+        msg = ParamsUploadedEvent()
+        msg.arams_body = new_parameters.json()
+        self.send_signal(ParamsUploadedEvent, msg)
+
+
+class HttpServerController(AbstractModuleController):
+
+    def __init__(self, drone_collector: DroneStateCollector, client_controller: ComClientController):
+        AbstractModuleController.__init__(
+            self, 'http_server', HttpServerProcessAction)
+        self._drone_state_collector = drone_collector
+        self.add_signal_receiver(
+            '/drone_state', DroneState, self.update_drone_state)
+        self.add_signal_receiver(
+            '/params_update', ParamsUploadedEvent, self.update_parameters)
+        self._client_controller = client_controller
+
+    def process_feedback(self, feedback: HttpServerProcessFeedback) -> None:
+        print('Feedback received')
+
+    def start_module(self):
+        start_arguments = HttpServerProcessGoal()
+        start_arguments.host_address = '192.168.1.10'
+        start_arguments.port = 8080
+        AbstractModuleController.start_module(self, start_arguments)
+
+    def on_process_result_received(self, state: any, result: HttpServerProcessResult) -> None:
+        print(result.exit_code)
+
+    def update_drone_state(self, drone_state: DroneState):
+        self._drone_state_collector.drone_lattitude = drone_state.latt
+        self._drone_state_collector.drone_longitude = drone_state.long
+        self._drone_state_collector.drone_altitude = drone_state.alt
+        self._drone_state_collector.drone_battery_voltage = drone_state.voltage
+        self._drone_state_collector.drone_battery_temperature = drone_state.temperature
+
+    @inject
+    def update_parameters(self, params_update_event: ParamsUploadedEvent, param_updater: ParametersConfigurator = Provide[GlobalContainer.parametes_updater]):
+        body: DynamicParams = DynamicParams.parse_raw(
+            params_update_event.params_body)
+        param_updater.apply_new_params(body.dict())
+        self._client_controller.update_parameters(body)
+
 
 class FTPServerController(AbstractModuleController):
 
     def __init__(self):
-        AbstractModuleController.__init__(self, 'ftp_server', FTPServerProcessAction)
+        AbstractModuleController.__init__(
+            self, 'ftp_server', FTPServerProcessAction)
 
     def start_module(self):
         start_arguments = FTPServerProcessGoal()
         start_arguments.host_address = '192.168.1.10'
-        # start_arguments.host_address = '192.168.8.199'
         start_arguments.port = 2121
         start_arguments.ftp_password = 'oze'
         start_arguments.user = 'oze'
-        # start_arguments.files_directory = "/home/damiano/pics"
         start_arguments.files_directory = str(Path.home()) + "/pics"
         AbstractModuleController.start_module(self, start_arguments)
 
@@ -382,14 +405,18 @@ class FTPServerController(AbstractModuleController):
 class StationModules:
     def __init__(self, state_collector: StationStateCollector,
                  service_mppt_connection_state_callback: Callable[[int], None]):
-        self.automation_controller = AutomationModuleController(state_collector.automation_state)
+        self.automation_controller = AutomationModuleController(
+            state_collector.automation_state)
         self.tracker_controller = TrackerModuleController(state_collector.mppt_state,
                                                           service_mppt_connection_state_callback)
-        self.power_controller = PowerManagementModuleController(state_collector.power_management_state)
-        self.meteo_controller = MeteoModuleController(state_collector.meteo_state)
-        self.http_server_controller = HttpServerController(state_collector.drone_state)
+        self.power_controller = PowerManagementModuleController(
+            state_collector.power_management_state)
+        self.meteo_controller = MeteoModuleController(
+            state_collector.meteo_state)
         self.http_client_controller = HttpClientController(state_collector)
         self.com_client_controller = ComClientController()
+        self.http_server_controller = HttpServerController(
+            state_collector.drone_state, self.com_client_controller)
         self.ftp_server_controller = FTPServerController()
 
     def init_modules(self):
