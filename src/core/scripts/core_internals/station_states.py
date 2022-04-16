@@ -1,3 +1,4 @@
+import imp
 import time
 from abc import ABC, abstractmethod
 from .module_controllers import StationModules
@@ -10,6 +11,8 @@ from enums.kss_core import StationStateIndicator, CheckEnum, StationErrors
 from commons.msg import MissionsUploadedEvent, HttpServerSimpleEvent, ReceivedImagesFromFtpServerEvent, DroneEvent
 from .mission_storage import MissionStorage
 from data_models.kss_server import JsonMissionsMessage, JsonMissionPackage
+import rospy
+from enums.params import Params
 
 
 class FireProtectionException(Exception):
@@ -338,8 +341,6 @@ class InitializationState(StationState):
 
 class IdleState(StationState):
     BATTERY_CHECK_PERIOD = 0.4
-    MAX_DRONE_BATTERY_VOLTAGE = 16.6
-    MIN_DRONE_BATTERY_VOLTAGE = 15.5
 
     def __init__(self):
         StationState.__init__(self)
@@ -399,13 +400,13 @@ class IdleState(StationState):
         self._battery_checker.stop()
 
     def is_fully_charged(self):
-        return self.current_station_data.drone_state.drone_battery_voltage >= self.MAX_DRONE_BATTERY_VOLTAGE
+        return self.current_station_data.drone_state.drone_battery_voltage >= rospy.get_param(Params.MAX_DRONE_BATTERY_VOLTAGE)
 
     def is_good_battery_level(self) -> bool:
-        return self.MIN_DRONE_BATTERY_VOLTAGE <= self.current_station_data.drone_state.drone_battery_voltage <= self.MAX_DRONE_BATTERY_VOLTAGE
+        return rospy.get_param(Params.MIN_DRONE_BATTERY_VOLTAGE) <= self.current_station_data.drone_state.drone_battery_voltage <= rospy.get_param(Params.MAX_DRONE_BATTERY_VOLTAGE)
 
     def is_battery_low_level(self) -> bool:
-        return self.current_station_data.drone_state.drone_battery_voltage < self.MIN_DRONE_BATTERY_VOLTAGE
+        return self.current_station_data.drone_state.drone_battery_voltage < rospy.get_param(Params.MIN_DRONE_BATTERY_VOLTAGE)
 
     def turn_on_battery_charging(self):
         self.station_modules.power_controller.enable_drone_charging()

@@ -1,22 +1,10 @@
 from .collectors import StationStateCollector, StationEventFlags, ErrorFlags
 from multitimer import MultiTimer
+from enums.params import Params
+import rospy
 
 
 class FlagsChecker:
-    DRONE_BATTERY_MAX_TEMP = 40
-    STATION_BATTERY_MAX_TEMP = 50
-    TRACKER_BATTERY_MAX_TEMP = 50
-
-    ENV_MAX_TEMP = 40.0
-    ENV_MAX_HUMIDITY = 0.99
-    ENV_MAX_RAIN_MM = 20.0
-    ENV_MAX_WIND_SPEED = 10.0
-    ENV_MAX_GUST = 25.0
-
-    MIN_SOLAR_PANELS_VOLTAGE = 40
-
-    MAX_CHARGING_CURRENT = 5
-
     def __init__(self, station_state_collector: StationStateCollector, error_flags: ErrorFlags, check_period: float):
         self._station_state_collector = station_state_collector
         self._error_flags = error_flags
@@ -43,19 +31,22 @@ class FlagsChecker:
         # self.check_solar_panels_voltage()
 
     def check_drone_battery_temperature(self):
-        if self._station_state_collector.drone_state.drone_battery_temperature > self.DRONE_BATTERY_MAX_TEMP:
+        if self._station_state_collector.drone_state.drone_battery_temperature > \
+                rospy.get_param(Params.DRONE_BATTERY_MAX_TEMP):
             self._error_flags.is_drone_battery_temperature_good = False
         else:
             self._error_flags.is_drone_battery_temperature_good = True
 
     def check_station_battery_temperature(self):
-        if self._station_state_collector.mppt_state.station_battery_temperature > self.STATION_BATTERY_MAX_TEMP:
+        if self._station_state_collector.mppt_state.station_battery_temperature > \
+                rospy.get_param(Params.STATION_BATTERY_MAX_TEMP):
             self._error_flags.is_station_battery_temperature_good = False
         else:
             self._error_flags.is_station_battery_temperature_good = True
 
     def check_tracker_temperature(self):
-        if self._station_state_collector.mppt_state.tracker_internal_temperature > self.TRACKER_BATTERY_MAX_TEMP:
+        if self._station_state_collector.mppt_state.tracker_internal_temperature > \
+                rospy.get_param(Params.TRACKER_BATTERY_MAX_TEMP):
             self._error_flags.is_tracker_temperature_good = False
         else:
             self._error_flags.is_tracker_temperature_good = True
@@ -81,17 +72,17 @@ class FlagsChecker:
 
     def check_weather(self):
         meteo_data = self._station_state_collector.meteo_state
-        if meteo_data.rain_mm < self.ENV_MAX_RAIN_MM and \
-                meteo_data.temperature < self.ENV_MAX_TEMP and \
-                meteo_data.humidity < self.ENV_MAX_HUMIDITY and \
-                meteo_data.wind_speed < self.ENV_MAX_WIND_SPEED and \
-                meteo_data.wind_gust < self.ENV_MAX_GUST:
+        if meteo_data.rain_mm < rospy.get_param(Params.ENV_MAX_RAIN_MM) and \
+                meteo_data.temperature < rospy.get_param(Params.ENV_MAX_TEMP) and \
+                meteo_data.humidity < rospy.get_param(Params.ENV_MAX_HUMIDITY) and \
+                meteo_data.wind_speed < rospy.get_param(Params.ENV_MAX_WIND_SPEED) and \
+                meteo_data.wind_gust < rospy.get_param(Params.ENV_MAX_GUST):
             self._error_flags.is_weather_good = True
         else:
             self._error_flags.is_weather_good = False
 
     def check_solar_panels_voltage(self):
-        if self._station_state_collector.mppt_state.solar_panels_voltage < self.MIN_SOLAR_PANELS_VOLTAGE:
+        if self._station_state_collector.mppt_state.solar_panels_voltage < rospy.get_param(Params.MIN_SOLAR_PANELS_VOLTAGE):
             self._error_flags.is_solar_panels_voltage_good = False
         else:
             self._error_flags.is_solar_panels_voltage_good = True
