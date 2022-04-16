@@ -1,3 +1,5 @@
+from mimetypes import init
+from core_internals.parameters import ParametersConfigurator
 import rospy
 from core_internals.collectors import StationStateCollector, StationEventFlags, ErrorFlags
 from core_internals.module_controllers import StationModules
@@ -12,6 +14,7 @@ import core_internals.module_controllers
 from core_internals.containers import GlobalContainer
 # TODO: add background processes class
 # TODO: add class for signal bindings
+from dependency_injector.wiring import Provide, inject
 
 
 class StateMachine:
@@ -92,11 +95,18 @@ class Core:
         self._state_machine.run()
 
 
+@inject
+def init_container(parametes_updater: ParametersConfigurator = Provide[GlobalContainer.parametes_updater]):
+    ...
+
+
 if __name__ == '__main__':
     rospy.init_node('core')
     container = GlobalContainer()
+    container.reset_singletons()
     container.wire(
         modules=[__name__, core_internals.module_controllers.__name__])
+    init_container()
 
     sigint_handler = SigIntHandler()
     core = Core()

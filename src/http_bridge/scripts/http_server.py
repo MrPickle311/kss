@@ -63,7 +63,7 @@ class EventNotifiers:
         self._kss_server_api.add_api_path_handler(
             '/api', '/gui_event/upload_mission', self._mission_receiver)
         self._kss_server_api.add_api_path_handler(
-            '/api', '/parameters', self._parameters_receiver)
+            '/api', '/gui_event/parameters_update', self._parameters_receiver)
 
     def _init_simple_event_notifiers(self):
         simple_events = ['start_drone', 'abort_drone', 'on_camera', 'off_camera', 'position_start', 'position_return',

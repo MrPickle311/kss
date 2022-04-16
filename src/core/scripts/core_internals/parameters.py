@@ -7,10 +7,12 @@ import rospy
 import os
 
 import yaml
+from pathlib import Path
 
 
 class ParametersConfigurator:
-    PARAMS_FILE_DESTINATION = "~/03_kss/src/core/param/dynamic_params.yml"
+    PARAMS_FILE_DESTINATION = str(
+        Path.home()) + "/03_kss/src/core/param/dynamic_params.yml"
 
     def __init__(self) -> None:
         self.update_params()
@@ -25,7 +27,7 @@ class ParametersConfigurator:
         return dict
 
     def update_params(self) -> None:
-        for param_name, param_value in self.get_dynamic_params_from_file():
+        for param_name, param_value in self.get_dynamic_params_from_file().items():
             rospy.set_param(param_name=param_name, param_value=param_value)
 
     def save_params_to_file(self, new_params: Dict[str, any]) -> None:

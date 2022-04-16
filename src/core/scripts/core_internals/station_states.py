@@ -11,6 +11,7 @@ from commons.msg import MissionsUploadedEvent, HttpServerSimpleEvent, ReceivedIm
 from .mission_storage import MissionStorage
 from data_models.kss_server import JsonMissionsMessage, JsonMissionPackage
 
+
 class FireProtectionException(Exception):
     pass
 
@@ -63,9 +64,11 @@ class StationState(ABC):
         def _maybe_not_successful(method: Callable[[any], bool]):
             def wrapper(*args, **kwargs):
                 if method(*args, **kwargs):
-                    StationState.update_station_state(state_to_inject_after_success)
+                    StationState.update_station_state(
+                        state_to_inject_after_success)
                 else:
-                    StationState.station_modules.http_client_controller.send_error(error_name)
+                    StationState.station_modules.http_client_controller.send_error(
+                        error_name)
 
             return wrapper
 
@@ -76,10 +79,12 @@ class StationState(ABC):
             def wrapper(*args, **kwargs):
                 while True:
                     if method(*args, **kwargs):
-                        StationState.update_station_state(state_to_inject_after_success)
+                        StationState.update_station_state(
+                            state_to_inject_after_success)
                         break
                     else:
-                        StationState.station_modules.http_client_controller.send_error(error_name)
+                        StationState.station_modules.http_client_controller.send_error(
+                            error_name)
 
             return wrapper
 
@@ -157,14 +162,16 @@ class StationState(ABC):
 
     @staticmethod
     def update_station_state(state: str):
-        StationState.station_modules.http_client_controller.send_station_status(state)
+        StationState.station_modules.http_client_controller.send_station_status(
+            state)
         StationState.station_state_indicator = state
 
     @staticmethod
     def wait_for_roof_open():
         @fire_protected(StationState.error_flags)
         def predicate() -> bool:
-            return StationState.current_station_data.automation_state.current_state == 2  # TODO: make commons enums
+            # TODO: make commons enums
+            return StationState.current_station_data.automation_state.current_state == 2
 
         StationState.wait_for_predicate(predicate)
 
@@ -172,7 +179,8 @@ class StationState(ABC):
     def wait_for_positioners_move_apart():
         @fire_protected(StationState.error_flags)
         def predicate() -> bool:
-            return StationState.current_station_data.automation_state.current_state == 4  # TODO: make commons enums
+            # TODO: make commons enums
+            return StationState.current_station_data.automation_state.current_state == 4
 
         StationState.wait_for_predicate(predicate)
 
@@ -180,7 +188,8 @@ class StationState(ABC):
     def wait_for_positioners_slide_off():
         @fire_protected(StationState.error_flags)
         def predicate() -> bool:
-            return StationState.current_station_data.automation_state.current_state == 6  # TODO: make commons enums
+            # TODO: make commons enums
+            return StationState.current_station_data.automation_state.current_state == 6
 
         StationState.wait_for_predicate(predicate)
 
@@ -188,7 +197,8 @@ class StationState(ABC):
     def wait_for_roof_close():
         @fire_protected(StationState.error_flags)
         def predicate() -> bool:
-            return StationState.current_station_data.automation_state.current_state == 8  # TODO: make commons enums
+            # TODO: make commons enums
+            return StationState.current_station_data.automation_state.current_state == 8
 
         StationState.wait_for_predicate(predicate)
 
@@ -267,7 +277,8 @@ class FireProtectionState(StationState):
 
         while True:
             state = self.current_station_data.automation_state.current_state
-            self.station_modules.automation_controller.try_apply_state(state + 1)
+            self.station_modules.automation_controller.try_apply_state(
+                state + 1)
             self.wait_for_automation_state(state + 2)
             if self.current_station_data.automation_state.current_state == 8:
                 break
@@ -293,13 +304,13 @@ class InitializationState(StationState):
 
     def execute(self):
         self.station_modules.init_modules()
-        self.init_attached_peripherals()
+        # self.init_attached_peripherals()
 
         def predicate() -> bool:
             return StationState.station_event_flags.drone_state_presence == 'com_initialized'
 
         print('Waiting for mkt')
-        StationState.wait_for_predicate(predicate)
+        # StationState.wait_for_predicate(predicate)
 
         self.update_station_state(StationStateIndicator.STATION_INITIALIZED)
         time.sleep(5)
@@ -335,7 +346,8 @@ class IdleState(StationState):
         self.station_modules.http_server_controller.add_signal_receiver('/missions_uploaded_event',
                                                                         MissionsUploadedEvent,
                                                                         self.receive_missions_from_server)
-        self._battery_checker = MultiTimer(self.BATTERY_CHECK_PERIOD, self.check_battery_level)
+        self._battery_checker = MultiTimer(
+            self.BATTERY_CHECK_PERIOD, self.check_battery_level)
         self._is_charger_turned_on = False
 
     def execute(self):
@@ -360,8 +372,8 @@ class IdleState(StationState):
         @fire_protected(self.error_flags)
         def predicate() -> bool:
             return self.is_good_weather() and \
-                   self.are_missions_to_do() and \
-                   self.is_good_battery_level()
+                self.are_missions_to_do() and \
+                self.is_good_battery_level()
 
         self.wait_for_predicate(predicate, 1)
         # self.update_station_state(StationStateIndicator.STATION_READY_TO_START)
@@ -369,7 +381,8 @@ class IdleState(StationState):
 
     def check_battery_level(self):
         if not self.is_good_battery_level():
-            print(f'Battery level {self.current_station_data.drone_state.drone_battery_voltage}')
+            print(
+                f'Battery level {self.current_station_data.drone_state.drone_battery_voltage}')
             if self.is_battery_low_level() and not self._is_charger_turned_on:
                 print('Battery level is low')
                 self.turn_on_battery_charging()
@@ -411,7 +424,8 @@ class IdleState(StationState):
             self.ask_for_missions()
 
     def ask_for_missions(self):
-        self.station_modules.http_client_controller.send_station_status(StationStateIndicator.READY_FOR_NEW_MISSIONS)
+        self.station_modules.http_client_controller.send_station_status(
+            StationStateIndicator.READY_FOR_NEW_MISSIONS)
 
 
 class MissionSelector:
@@ -456,7 +470,8 @@ class DroneFlightState(StationState):
     def wait_for_landing_ready(self):
         self.wait_for_com_event(['drone_is_ready_to_land'])
         print('Drone is ready to land')
-        self.update_station_state(StationStateIndicator.DRONE_READY_FOR_LANDING)
+        self.update_station_state(
+            StationStateIndicator.DRONE_READY_FOR_LANDING)
 
 
 class DroneLandingServiceState(StationState):
