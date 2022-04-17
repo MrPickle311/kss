@@ -1,5 +1,5 @@
 from mimetypes import init
-from core_internals.parameters import ParametersConfigurator
+from parameters.parameters import ParametersConfigurator
 import rospy
 from core_internals.collectors import StationStateCollector, StationEventFlags, ErrorFlags
 from core_internals.module_controllers import StationModules

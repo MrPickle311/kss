@@ -36,7 +36,7 @@ from data_models.kss_server import JsonMissionPackage, JsonMissionsMessage
 from std_msgs.msg import Bool
 
 from dependency_injector.wiring import Provide, inject
-from .parameters import ParametersConfigurator
+from parameters.parameters import ParametersConfigurator
 
 from data_models.params import DynamicParams
 
@@ -251,7 +251,6 @@ class HttpClientController(AbstractModuleController):
     def start_module(self):
         start_arguments = HttpClientProcessGoal()
         start_arguments.host_address = '192.168.1.14'
-        # start_arguments.host_address = '192.168.8.198'
         start_arguments.port = 8080
         start_arguments.station_id = 0
         start_arguments.images_directory = str(Path.home()) + "/pics/"
@@ -337,7 +336,7 @@ class ComClientController(AbstractModuleController):
 
     def update_parameters(self, new_parameters: DynamicParams) -> None:
         msg = ParamsUploadedEvent()
-        msg.arams_body = new_parameters.json()
+        msg.params_body = new_parameters.json()
         self.send_signal(ParamsUploadedEvent, msg)
 
 
