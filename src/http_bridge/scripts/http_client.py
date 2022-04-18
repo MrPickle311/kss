@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from gui_client.image_sender import ImageSender
-from gui_client.kss_client_senders import StateSender, ErrorSender, DiagnosticsSender
+from gui_client.kss_client_senders import StateSender, ErrorSender, DiagnosticsSender, HeartbeatSender
 from typing import List, Dict, Optional
 from module_io.module_interface import AbstractModule
 from module_utils.signal_handlers import SigIntHandler
@@ -8,6 +8,7 @@ from commons.msg import StationState, SendImagesToServerEvent, StationError
 from commons.msg import HttpClientProcessAction, HttpClientProcessGoal, HttpClientProcessResult, \
     HttpClientProcessFeedback, HttpExposedResourcesContent
 import rospy
+from multitimer import MultiTimer
 
 
 class HttpClientModule(AbstractModule):
@@ -16,19 +17,31 @@ class HttpClientModule(AbstractModule):
         self._err_sender: Optional[ErrorSender] = None
         self._image_sender: Optional[ImageSender] = None
         self._state_sender: Optional[StateSender] = None
-        self.add_signal_receiver('/send_station_state', StationState, self.send_station_status)
-        self.add_signal_receiver('/send_station_error', StationError, self.send_error)
-        self.add_signal_receiver('/send_images', SendImagesToServerEvent, self.send_images)
-        self.add_signal_receiver('/exposed_resources', HttpExposedResourcesContent, self.send_exposed_resources)
+        self.add_signal_receiver(
+            '/send_station_state', StationState, self.send_station_status)
+        self.add_signal_receiver(
+            '/send_station_error', StationError, self.send_error)
+        self.add_signal_receiver(
+            '/send_images', SendImagesToServerEvent, self.send_images)
+        self.add_signal_receiver(
+            '/exposed_resources', HttpExposedResourcesContent, self.send_exposed_resources)
 
     def _init_senders(self, ip_address: str, port: int, station_id: int, images_directory: str):
         self._err_sender = ErrorSender(ip_address, port, station_id)
-        self._image_sender = ImageSender(ip_address, port, station_id, images_directory)
+        self._image_sender = ImageSender(
+            ip_address, port, station_id, images_directory)
         self._state_sender = StateSender(ip_address, port, station_id)
-        self._diagnostics_sender = DiagnosticsSender(ip_address, port, station_id)
+        self._diagnostics_sender = DiagnosticsSender(
+            ip_address, port, station_id)
+
+        self._heartbeat_sender = HeartbeatSender(ip_address, port, station_id)
+        self._heartbeat_timer = MultiTimer(
+            60, self._heartbeat_sender.send_simple_message, runonstart=False)
+        self._heartbeat_timer.start()
 
     def start_module(self, start_args: HttpClientProcessGoal) -> None:
-        self._init_senders(start_args.host_address, start_args.port, start_args.station_id, start_args.images_directory)
+        self._init_senders(start_args.host_address, start_args.port,
+                           start_args.station_id, start_args.images_directory)
 
         # TODO: sometimes _image_sender is not initialized
         self.wait_for_module_finish()
