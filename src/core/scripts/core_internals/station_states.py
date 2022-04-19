@@ -3,7 +3,7 @@ import time
 from abc import ABC, abstractmethod
 from .module_controllers import StationModules
 from typing import Callable, List
-from .collectors import StationStateCollector, StationEventFlags, ErrorFlags
+from .collectors import StationStateCollector, StationEventFlags, ErrorFlags, ComEvent
 from waiting import wait
 from multitimer import MultiTimer
 import os
@@ -13,6 +13,7 @@ from .mission_storage import MissionStorage
 from data_models.kss_server import JsonMissionsMessage, JsonMissionPackage
 import rospy
 from enums.params import Params
+from termcolor import colored, cprint
 
 
 class FireProtectionException(Exception):
@@ -48,7 +49,7 @@ class StationState(ABC):
     simple_events = {
         'start_drone': lambda: ...,
         'land_drone_normally': lambda: ...,
-        'land_drone_emergency': lambda: ...,
+        'land_drone_emergency': lambda: StationState.station_modules.com_client_controller.try_emergency_land_drone(),
         'abort_drone': lambda: StationState.station_modules.com_client_controller.abort_drone_mission(),
         'on_camera': lambda: StationState.station_modules.power_controller.enable_camera(),
         'off_camera': lambda: StationState.station_modules.power_controller.disable_camera(),
@@ -58,9 +59,10 @@ class StationState(ABC):
         'close_roof': lambda: StationState.try_close_roof()}
 
     drone_events = {
-        'drone_is_ready_to_land': lambda: ...,
-        'drone_landed': lambda: ...,
-        'com_initialized': lambda: ...
+        ComEvent.COM_INITIALIZED: lambda: ...,
+        ComEvent.DRONE_IS_APPROACHING: lambda: ...,
+        ComEvent.DRONE_IS_READY_TO_LAND: lambda: ...,
+        ComEvent.DRONE_LANDED: lambda: ...
     }
 
     def maybe_not_successful(error_name: str, state_to_inject_after_success: str):
@@ -98,14 +100,14 @@ class StationState(ABC):
         event = simple_event.event_name.split(sep='/')[-1]
         StationState.simple_events[event]()
         StationState.station_event_flags.gui_event_presence = event
-        print(f'received gui event {event}')
+        cprint(f'Received gui event : {event}', 'blue')
 
     @staticmethod
     def received_drone_event(drone_event: DroneEvent):
-        print(f'received drone event {drone_event.event}')
+        print(f'Received drone event {drone_event.event}')
         StationState.drone_events[drone_event.event]()
         StationState.station_event_flags.drone_state_presence = drone_event.event
-        print(f'received drone event {drone_event.event}')
+        cprint(f'received drone event {drone_event.event}', 'green')
 
     @staticmethod
     def init_station_states_scope():
@@ -464,25 +466,27 @@ class StartState(StationState):
 
 class DroneFlightState(StationState):
     def execute(self):
-        print('Awaiting for drone landing ready')
-        self.wait_for_landing_ready()
+        print('Awaiting for drone approach')
+        self.wait_for_drone_approaching()
         print('Drone flight state is finished')
 
-    def wait_for_landing_ready(self):
-        self.wait_for_com_event(['drone_is_ready_to_land'])
-        print('Drone is ready to land')
+    def wait_for_drone_approaching(self):
+        self.wait_for_com_event([ComEvent.DRONE_IS_APPROACHING])
+        print('Drone is approaching!')
         self.update_station_state(
-            StationStateIndicator.DRONE_READY_FOR_LANDING)
+            StationStateIndicator.DRONE_IS_APPROACHING)
 
 
 class DroneLandingServiceState(StationState):
     def execute(self):
         print('Awaiting for automation open')
         self.wait_for_positioners_move_apart()
+        print('Waiting for the drone to be ready for landing')
+        self.wait_for_landing_ready()
         print('Trying drone land')
         self.try_drone_land()
         print('Waiting for drone land')
-        self.wait_until_drone_land()
+        self.wait_until_drone_land()  # 60 sec
         print('Awaiting for automation close')
         self.wait_for_roof_close()
         print('Drone service state is finished')
@@ -490,24 +494,29 @@ class DroneLandingServiceState(StationState):
     def try_land_drone_normally(self) -> bool:
         return self.station_modules.com_client_controller.try_normally_land_drone()
 
-    def try_land_drone_emergency(self) -> bool:
-        return self.station_modules.com_client_controller.try_emergency_land_drone()
+    # def try_land_drone_emergency(self) -> bool:
+        # return self.station_modules.com_client_controller.try_emergency_land_drone()
+
+    def wait_for_landing_ready(self):
+        self.wait_for_com_event([ComEvent.DRONE_IS_READY_TO_LAND])
+        print('Drone is ready to land')
+        self.update_station_state(
+            StationStateIndicator.DRONE_READY_FOR_LANDING)
 
     @StationState.wait_to_be_successful(StationErrors.CANNOT_LAND_DRONE, StationStateIndicator.DRONE_LANDING)
     def try_drone_land(self):
         landing_mode = self.wait_for_land_drone_confirmation()
         if landing_mode == 'land_drone_normally':
             return self.try_land_drone_normally()
-        elif landing_mode == 'land_drone_emergency':
-            return self.try_land_drone_emergency()
+        # elif landing_mode == 'land_drone_emergency':
+            # return self.try_land_drone_emergency()
         return False
 
     def wait_for_land_drone_confirmation(self) -> str:
-        return self.wait_for_gui_events(['land_drone_normally', 'land_drone_emergency'])
+        return self.wait_for_gui_events(['land_drone_normally'])
 
     def wait_until_drone_land(self):
-        # self.wait_for_com_events(['drone_landed'])
-        time.sleep(20)
+        self.wait_for_com_events(['drone_landed'])
         self.update_station_state(StationStateIndicator.DRONE_LANDED)
 
 
